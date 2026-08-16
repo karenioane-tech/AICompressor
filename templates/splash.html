@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Compress</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/splash.css') }}">
+</head>
+<body>
+
+<div class="splash-page" id="splashPage">
+
+    <div class="splash-card">
+
+        <div class="brand">
+            AI<span>Compress</span>
+        </div>
+
+        <!-- Mascot -->
+        <div class="mascot" id="mascot">
+            <div class="mascot-head">
+                <div class="mascot-eye left"></div>
+                <div class="mascot-eye right"></div>
+            </div>
+            <div class="mascot-arm"></div>
+        </div>
+
+        <p class="tagline" id="tagline">Compress files. Keep what matters.</p>
+
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <p class="status" id="status">Warming up the engine...</p>
+
+    </div>
+
+    <p class="skip-hint">tap anywhere to skip</p>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/splash.js') }}"></script>
+
+</body>
+</html>

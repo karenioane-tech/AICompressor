@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        AI File Compressor
+    </title>
+
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for(
+            'static',
+            filename='css/style.css'
+        ) }}"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================================
+     NAVBAR
+====================================================== -->
+
+<header class="navbar">
+
+    <div class="logo">
+
+        AI<span>Compress</span>
+
+    </div>
+
+
+    <div class="badge">
+
+        AI + DATA
+
+    </div>
+
+</header>
+
+
+
+<!-- =====================================================
+     MAIN
+====================================================== -->
+
+<main class="container">
+
+
+    <!-- =================================================
+         HERO
+    ================================================== -->
+
+    <section class="hero">
+
+        <p class="eyebrow">
+
+            INTELLIGENT FILE OPTIMIZATION
+
+        </p>
+
+
+        <h1>
+
+            Compress files.
+
+            <br>
+
+            <span>
+                Keep what matters.
+            </span>
+
+        </h1>
+
+
+        <p class="subtitle">
+
+            Use AI-powered image optimization,
+PDF optimization and algorithmic
+data compression to reduce file sizes.
+
+        </p>
+
+    </section>
+
+
+
+    <!-- =================================================
+         UPLOAD CARD
+    ================================================== -->
+
+    <section class="upload-card">
+
+
+        <form id="compressForm">
+
+
+            <!-- DROP ZONE -->
+
+            <div
+                id="dropZone"
+                class="drop-zone"
+            >
+
+
+                <div class="upload-icon">
+
+                    📁
+
+                </div>
+
+
+                <h2>
+
+                    Drop your file here
+
+                </h2>
+
+
+                <p>
+
+                    or click to browse
+
+                </p>
+
+
+                <input
+                    type="file"
+                    id="fileInput"
+                    name="file"
+                    hidden
+                    accept=".jpg,.jpeg,.png,.webp,.pdf,.txt,.csv,.json,.xml,.log"
+                >
+
+
+                <button
+                    type="button"
+                    id="browseButton"
+                >
+
+                    Browse Files
+
+                </button>
+
+
+                <small>
+
+                    JPG · PNG · WEBP · PDF · TXT · CSV · JSON
+
+                </small>
+
+
+
+                <!-- IMAGE PREVIEW -->
+
+                <div
+                    id="previewContainer"
+                    class="preview-container hidden"
+                >
+
+                    <img
+                        id="imagePreview"
+                        src=""
+                        alt="Image preview"
+                    >
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- =================================================
+                 FILE INFORMATION
+            ================================================== -->
+
+            <div
+                id="fileInfo"
+                class="file-info hidden"
+            >
+
+                <div>
+
+                    <strong id="fileName">
+
+                        file.jpg
+
+                    </strong>
+
+
+                    <span id="fileSize">
+
+                        0 KB
+
+                    </span>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    id="removeFile"
+                >
+
+                    ×
+
+                </button>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 QUALITY
+            ================================================== -->
+
+            <div class="quality-selector">
+
+
+                <label for="quality">
+
+                    Compression Quality
+
+                </label>
+
+
+                <select id="quality">
+
+                    <option value="fast">
+
+                        Fast — Smaller File
+
+                    </option>
+
+
+                    <option
+                        value="balanced"
+                        selected
+                    >
+
+                        Balanced — Recommended
+
+                    </option>
+
+
+                    <option value="high">
+
+                        High Quality — Larger File
+
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 COMPRESS BUTTON
+            ================================================== -->
+
+            <button
+                type="submit"
+                id="compressButton"
+                class="compress-button"
+                disabled
+            >
+
+                Compress File
+
+            </button>
+
+
+        </form>
+
+
+
+        <!-- =================================================
+             LOADING
+        ================================================== -->
+
+        <div
+            id="loading"
+            class="loading hidden"
+        >
+
+            <div class="spinner"></div>
+
+
+            <p>
+
+                Analyzing and compressing...
+
+            </p>
+
+        </div>
+
+
+
+        <!-- =================================================
+             RESULT
+        ================================================== -->
+
+        <div
+            id="result"
+            class="result hidden"
+        >
+
+
+            <div class="success-icon">
+
+                ✓
+
+            </div>
+
+
+            <h2>
+
+                Compression Complete
+
+            </h2>
+
+
+
+            <!-- STATISTICS -->
+
+            <div class="stats">
+
+
+                <div class="stat">
+
+                    <span>
+                        Original
+                    </span>
+
+                    <strong
+                        id="originalSize"
+                    >
+                        -
+                    </strong>
+
+                </div>
+
+
+
+                <div class="stat">
+
+                    <span>
+                        Compressed
+                    </span>
+
+                    <strong
+                        id="compressedSize"
+                    >
+                        -
+                    </strong>
+
+                </div>
+
+
+
+                <div class="stat highlight">
+
+                    <span>
+                        Saved
+                    </span>
+
+                    <strong
+                        id="savedPercentage"
+                    >
+                        -
+                    </strong>
+
+                </div>
+
+
+
+                <div class="stat">
+
+                    <span>
+                        Compression Ratio
+                    </span>
+
+                    <strong
+                        id="compressionRatio"
+                    >
+                        -
+                    </strong>
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- ENGINE -->
+
+            <div class="engine">
+
+                <span>
+
+                    Compression Engine
+
+                </span>
+
+
+                <strong id="engine">
+
+                    -
+
+                </strong>
+
+            </div>
+
+
+
+            <!-- DOWNLOAD -->
+
+            <a
+                id="downloadButton"
+                class="download-button"
+                href="#"
+            >
+
+                Download Compressed File
+
+            </a>
+
+
+
+            <!-- RESET -->
+
+            <button
+                id="resetButton"
+                class="reset-button"
+            >
+
+                Compress Another File
+
+            </button>
+
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =================================================
+         HISTORY
+    ================================================== -->
+
+    <section
+        id="historySection"
+        class="history-section"
+    >
+
+
+        <div class="history-header">
+
+            <h2>
+
+                Recent Compression
+
+            </h2>
+
+
+            <button
+                id="clearHistory"
+            >
+
+                Clear
+
+            </button>
+
+        </div>
+
+
+        <div id="historyList"></div>
+
+
+    </section>
+
+
+</main>
+
+
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/app.js'
+    ) }}"
+></script>
+
+
+</body>
+
+</html>
