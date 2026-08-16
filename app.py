@@ -14,9 +14,9 @@ from flask import (
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 
-from compression.image_compressor import compress_image
-from compression.data_compressor import compress_data
-from compression.pdf_compressor import compress_pdf
+from compressors.image_compressor import compress_image
+from compressors.data_compressor import compress_data
+from compressors.pdf_compressor import compress_pdf
 
 
 # Load environment variables from .env file (local development)
