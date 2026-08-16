@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Uploaded / generated files — transient, never commit user data
+uploads/*
+!uploads/.gitkeep
+compressed/*
+!compressed/.gitkeep
+
+# Env / secrets
+.env
+*.env.local
+
+# OS / editor
+.DS_Store
+.vscode/

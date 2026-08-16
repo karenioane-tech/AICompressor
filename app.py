@@ -1,6 +1,7 @@
 import os
 import time
 import uuid
+from dotenv import load_dotenv
 
 from flask import (
     Flask,
@@ -18,6 +19,9 @@ from compression.data_compressor import compress_data
 from compression.pdf_compressor import compress_pdf
 
 
+# Load environment variables from .env file (local development)
+load_dotenv()
+
 app = Flask(__name__)
 
 
@@ -25,17 +29,16 @@ app = Flask(__name__)
 # CONFIGURATION
 # ==========================================================
 
-UPLOAD_FOLDER = "uploads"
-COMPRESSED_FOLDER = "compressed"
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "uploads")
+COMPRESSED_FOLDER = os.getenv("COMPRESSED_FOLDER", "compressed")
+FILE_RETENTION_SECONDS = int(os.getenv("FILE_RETENTION_SECONDS", "3600"))  # 1 hour default
+MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", "52428800"))  # 50 MB default
+FLASK_ENV = os.getenv("FLASK_ENV", "development")
+DEBUG = FLASK_ENV == "development"
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["COMPRESSED_FOLDER"] = COMPRESSED_FOLDER
-
-# Maximum upload size: 50 MB
-app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
-
-# How long a compressed file stays downloadable before it's purged
-FILE_RETENTION_SECONDS = 60 * 60  # 1 hour
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE
 
 
 os.makedirs(
@@ -494,12 +497,14 @@ def handle_file_too_large(error):
 
 if __name__ == "__main__":
 
+    port = int(os.getenv("PORT", "5000"))
+    
     app.run(
 
-        host="127.0.0.1",
+        host="0.0.0.0",
 
-        port=5000,
+        port=port,
 
-        debug=True
+        debug=DEBUG
 
     )
