@@ -1,7 +1,6 @@
 import os
 import time
 import uuid
-from dotenv import load_dotenv
 
 from flask import (
     Flask,
@@ -19,9 +18,6 @@ from compressors.data_compressor import compress_data
 from compressors.pdf_compressor import compress_pdf
 
 
-# Load environment variables from .env file (local development)
-load_dotenv()
-
 app = Flask(__name__)
 
 
@@ -29,16 +25,17 @@ app = Flask(__name__)
 # CONFIGURATION
 # ==========================================================
 
-UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "uploads")
-COMPRESSED_FOLDER = os.getenv("COMPRESSED_FOLDER", "compressed")
-FILE_RETENTION_SECONDS = int(os.getenv("FILE_RETENTION_SECONDS", "3600"))  # 1 hour default
-MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", "52428800"))  # 50 MB default
-FLASK_ENV = os.getenv("FLASK_ENV", "development")
-DEBUG = FLASK_ENV == "development"
+UPLOAD_FOLDER = "uploads"
+COMPRESSED_FOLDER = "compressed"
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["COMPRESSED_FOLDER"] = COMPRESSED_FOLDER
-app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE
+
+# Maximum upload size: 50 MB
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
+
+# How long a compressed file stays downloadable before it's purged
+FILE_RETENTION_SECONDS = 60 * 60  # 1 hour
 
 
 os.makedirs(
@@ -132,6 +129,108 @@ def dashboard():
     return render_template("index.html")
 
 
+def run_compression(extension, input_path, output_path, quality):
+    """
+    Dispatches to the right compressor based on file extension.
+    Raises ValueError for a user-facing validation problem
+    (e.g. an encrypted PDF), or lets unexpected exceptions
+    propagate so the caller can handle them generically.
+    """
+
+    # ======================================================
+    # IMAGE
+    # ======================================================
+
+    if extension in IMAGE_EXTENSIONS:
+
+        quality_settings = {
+
+            "fast": 16,
+
+            "balanced": 32,
+
+            "high": 64
+
+        }
+
+
+        colors = quality_settings.get(
+            quality,
+            32
+        )
+
+
+        compression_info = compress_image(
+
+            input_path,
+
+            output_path,
+
+            colors=colors
+
+        )
+
+
+        engine = (
+            "K-Means AI Color Quantization"
+        )
+
+
+    # ======================================================
+    # TEXT / DATA
+    # ======================================================
+
+    elif extension in DATA_EXTENSIONS:
+
+        compression_info = compress_data(
+
+            input_path,
+
+            output_path
+
+        )
+
+
+        engine = (
+            "Gzip / DEFLATE"
+        )
+
+
+    # ======================================================
+    # PDF
+    # ======================================================
+
+    elif extension in PDF_EXTENSIONS:
+
+        compression_info = compress_pdf(
+
+            input_path,
+
+            output_path
+
+        )
+
+
+        engine = (
+            "PDF Image + Content Stream Optimization"
+        )
+
+
+    # ======================================================
+    # UNSUPPORTED
+    # ======================================================
+
+    else:
+
+        raise ValueError(
+            "Unsupported file type. "
+            "Use JPG, PNG, WEBP, PDF, TXT, "
+            "CSV, JSON, XML or LOG."
+        )
+
+    return compression_info, engine
+
+
 # ==========================================================
 # COMPRESS
 # ==========================================================
@@ -213,147 +312,98 @@ def compress():
     )
 
 
-    # ======================================================
-    # IMAGE
-    # ======================================================
+    # ------------------------------------------------------
+    # Run compression — anything that goes wrong here (a
+    # corrupted upload, an encrypted PDF, an unsupported
+    # extension, an unexpected library error) is caught here
+    # so the person always gets a clean JSON error instead of
+    # a raw server crash, and the raw upload is always cleaned
+    # up rather than left behind.
+    # ------------------------------------------------------
 
-    if extension in IMAGE_EXTENSIONS:
-
-        output_filename = (
-            f"{unique_id}_compressed.webp"
-        )
-
-
-        output_path = os.path.join(
-            COMPRESSED_FOLDER,
-            output_filename
-        )
+    quality = request.form.get(
+        "quality",
+        "balanced"
+    )
 
 
-        # Get quality from frontend
-        quality = request.form.get(
-            "quality",
-            "balanced"
-        )
+    extension_to_output_name = {
+
+        "jpg": f"{unique_id}_compressed.webp",
+        "jpeg": f"{unique_id}_compressed.webp",
+        "png": f"{unique_id}_compressed.webp",
+        "webp": f"{unique_id}_compressed.webp",
+
+        "txt": f"{unique_id}_compressed.gz",
+        "csv": f"{unique_id}_compressed.gz",
+        "json": f"{unique_id}_compressed.gz",
+        "xml": f"{unique_id}_compressed.gz",
+        "log": f"{unique_id}_compressed.gz",
+
+        "pdf": f"{unique_id}_compressed.pdf"
+
+    }
 
 
-        quality_settings = {
-
-            "fast": 16,
-
-            "balanced": 32,
-
-            "high": 64
-
-        }
+    output_filename = extension_to_output_name.get(
+        extension,
+        f"{unique_id}_compressed"
+    )
 
 
-        colors = quality_settings.get(
-            quality,
-            32
-        )
+    output_path = os.path.join(
+        COMPRESSED_FOLDER,
+        output_filename
+    )
 
 
-        compression_info = compress_image(
+    try:
+
+        compression_info, engine = run_compression(
+
+            extension,
 
             input_path,
 
             output_path,
 
-            colors=colors
+            quality
 
         )
 
 
-        engine = (
-            "K-Means AI Color Quantization"
-        )
-
-
-    # ======================================================
-    # TEXT / DATA
-    # ======================================================
-
-    elif extension in DATA_EXTENSIONS:
-
-        output_filename = (
-            f"{unique_id}_compressed.gz"
-        )
-
-
-        output_path = os.path.join(
-            COMPRESSED_FOLDER,
-            output_filename
-        )
-
-
-        compression_info = compress_data(
-
-            input_path,
-
-            output_path
-
-        )
-
-
-        engine = (
-            "Gzip / DEFLATE"
-        )
-
-
-    # ======================================================
-    # PDF
-    # ======================================================
-
-    elif extension in PDF_EXTENSIONS:
-
-        output_filename = (
-            f"{unique_id}_compressed.pdf"
-        )
-
-
-        output_path = os.path.join(
-            COMPRESSED_FOLDER,
-            output_filename
-        )
-
-
-        compression_info = compress_pdf(
-
-            input_path,
-
-            output_path
-
-        )
-
-
-        engine = (
-            "PDF Content Stream Optimization"
-        )
-
-
-    # ======================================================
-    # UNSUPPORTED
-    # ======================================================
-
-    else:
+    except ValueError as error:
 
         if os.path.exists(input_path):
-
             os.remove(input_path)
 
+        return jsonify({
+
+            "success": False,
+
+            "error": str(error)
+
+        }), 400
+
+
+    except Exception as error:
+
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+        print(f"Compression failed for '{original_filename}': {error}")
 
         return jsonify({
 
             "success": False,
 
             "error": (
-                "Unsupported file type. "
-                "Use JPG, PNG, WEBP, PDF, TXT, "
-                "CSV, JSON, XML or LOG."
+                "Something went wrong while compressing this "
+                "file. It may be corrupted or in an unusual "
+                "format."
             )
 
-        }), 400
+        }), 500
 
 
     # ======================================================
@@ -497,14 +547,14 @@ def handle_file_too_large(error):
 
 if __name__ == "__main__":
 
-    port = int(os.getenv("PORT", "5000"))
-    
+    port = int(os.environ.get("PORT", 5000))
+
     app.run(
 
         host="0.0.0.0",
 
         port=port,
 
-        debug=DEBUG
+        debug=True
 
     )

@@ -1,17 +1,31 @@
 from pypdf import PdfReader, PdfWriter
+from pypdf.errors import PdfReadError
 
 
-def compress_pdf(input_path, output_path):
+def compress_pdf(input_path, output_path, image_quality=60):
     """
     Compress a PDF by:
     1. Reading the original PDF
     2. Adding pages to a PdfWriter
-    3. Compressing each page's content streams
-    4. Removing duplicate objects where possible
-    5. Writing the optimized PDF
+    3.Recompressing embedded images
+    4. Compressing each page's content streams
+    5. Removing duplicate objects where possible
+    6. Writing the optimized PDF
     """
 
-    reader = PdfReader(input_path)
+    try:
+        reader = PdfReader(input_path)
+    except PdfReadError as error:
+        raise ValueError(
+            "This PDF could not be read — it may be corrupted "
+            "or password-protected."
+        ) from error
+
+    if reader.is_encrypted:
+        raise ValueError(
+            "This PDF is password-protected. Remove the "
+            "password before compressing."
+        )
 
     writer = PdfWriter()
 
@@ -22,10 +36,35 @@ def compress_pdf(input_path, output_path):
 
         writer.add_page(page)
 
-    # Now the pages belong to PdfWriter,
-    # so content stream compression is safe.
+    images_compressed = 0
+
     for page in writer.pages:
 
+        # Embedded images are usually the single biggest
+        # contributor to PDF file size — recompress each one
+        # as JPEG at a reduced quality before touching anything
+        # else on the page.
+        try:
+
+            for img in page.images:
+
+                try:
+                    img.replace(img.image, quality=image_quality)
+                    images_compressed += 1
+
+                except Exception as error:
+                    print(
+                        f"Warning: Could not recompress image "
+                        f"'{img.name}': {error}"
+                    )
+
+        except Exception as error:
+            print(
+                f"Warning: Could not access images on page: {error}"
+            )
+
+        # Now the pages belong to PdfWriter,
+        # so content stream compression is safe.
         try:
 
             page.compress_content_streams()
@@ -62,5 +101,6 @@ def compress_pdf(input_path, output_path):
 
     return {
         "pages": len(reader.pages),
-        "algorithm": "PDF Content Stream Optimization"
+        "images_compressed": images_compressed,
+        "algorithm": "PDF Image + Content Stream Optimization"
     }

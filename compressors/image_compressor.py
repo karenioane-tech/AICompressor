@@ -22,9 +22,34 @@ def compress_image(
     # OPEN IMAGE
     # ======================================================
 
-    image = Image.open(
+    original = Image.open(
         input_path
-    ).convert("RGB")
+    )
+
+
+    # Detect transparency BEFORE any mode conversion,
+    # since converting straight to RGB silently discards it.
+    has_alpha = (
+
+        original.mode in ("RGBA", "LA")
+
+        or (
+            original.mode == "P"
+            and "transparency" in original.info
+        )
+
+    )
+
+
+    if has_alpha:
+
+        image = original.convert("RGBA")
+        alpha_channel = image.split()[-1]
+
+    else:
+
+        image = original.convert("RGB")
+        alpha_channel = None
 
 
     # ======================================================
@@ -64,12 +89,25 @@ def compress_image(
         )
 
 
+        if alpha_channel is not None:
+
+            alpha_channel = alpha_channel.resize(
+
+                new_size,
+
+                Image.Resampling.LANCZOS
+
+            )
+
+
     # ======================================================
-    # CONVERT TO NUMPY
+    # CONVERT TO NUMPY (RGB only — alpha is handled separately)
     # ======================================================
 
+    rgb_image = image.convert("RGB")
+
     image_array = np.array(
-        image
+        rgb_image
     )
 
 
@@ -122,10 +160,21 @@ def compress_image(
     # ======================================================
     # K-MEANS
     # ======================================================
+    # A cluster count higher than the number of pixels being
+    # clustered is invalid — guard against tiny/icon-sized images.
+
+    effective_colors = max(
+        1,
+        min(
+            colors,
+            len(sample_pixels)
+        )
+    )
+
 
     kmeans = KMeans(
 
-        n_clusters=colors,
+        n_clusters=effective_colors,
 
         random_state=42,
 
@@ -195,9 +244,18 @@ def compress_image(
     )
 
 
+    # Re-attach the original transparency, if any
+    if alpha_channel is not None:
+
+        compressed_image = compressed_image.convert("RGBA")
+        compressed_image.putalpha(alpha_channel)
+
+
     # ======================================================
     # SAVE WEBP
     # ======================================================
+    # WEBP supports alpha natively, so transparent images stay
+    # transparent instead of getting a solid background baked in.
 
     compressed_image.save(
 
@@ -225,9 +283,12 @@ def compress_image(
             height,
 
         "colors":
-            colors,
+            effective_colors,
 
         "sampled_pixels":
-            len(sample_pixels)
+            len(sample_pixels),
+
+        "transparency_preserved":
+            has_alpha
 
     }
